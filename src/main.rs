@@ -1,7 +1,9 @@
+use std::io::Error;
 use std::{collections::HashMap};
 use std::env;
 use std::net::Ipv4Addr;
 use chrono::{Utc};
+use image::{DynamicImage, GenericImageView, Pixel, GenericImage};
 use mongodb::Collection;
 use mongodb::options::FindOneOptions;
 use warp::hyper::Body;
@@ -9,6 +11,8 @@ use warp::{http::Response, Filter};
 use mongodb::{Client, options::ClientOptions};
 use serde::{Deserialize, Serialize};
 use mongodb::{bson::doc};
+use rand::Rng;
+use image::io::Reader as ImageReader;
 
 #[tokio::main]
 async fn main() {
@@ -61,11 +65,11 @@ async fn main() {
             .and(warp::path::end())
             .and_then(|| async move {
 
-                let image_index = get_image().await;
-                let res = insert_challenge(image_index).await;
+                let image = get_image().await;
+                let res = insert_challenge(image.0).await;
                 
                 match res{
-                    Some(challenge) => Ok(ChallengeStartDto::new(challenge)),
+                    Some(challenge) => Ok(ChallengeStartDto::new(challenge, image.1, image.2)),
                     None => Err(warp::reject()),
                 }
 
@@ -118,11 +122,13 @@ impl ChallengeInsert {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct ChallengeStartDto{
-    id : String
+    id : String,
+    big_img: String,
+    small_imgs: Vec<String>
 }
 
 impl ChallengeStartDto {
-    fn new(id: String) -> Self { Self { id } }
+    fn new(id: String, big_img: String, small_imgs: Vec<String>) -> Self { Self { id,  big_img, small_imgs } }
 }
 
 impl warp::Reply for ChallengeStartDto{
@@ -137,7 +143,7 @@ impl warp::Reply for ChallengeStartDto{
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct ChallengeCheckDto{
     id : String,
     success: bool,
@@ -217,6 +223,54 @@ async fn insert_challenge(expected : u32) -> Option<String>{
     }
 }
 
-async fn get_image() -> u32{
-    4
+struct Img{
+    pub image: DynamicImage,
+    pub x: u32,
+    pub y: u32
+}
+
+impl Img {
+    fn new(image: DynamicImage, x: u32, y: u32) -> Self { Self { image, x, y } }
+}
+
+async fn get_image() -> (u32, String,  Vec<String>) {
+    let path = get_random_image_name();
+    let mut vec:Vec<Img> = Vec::new();
+    let mut img = ImageReader::open(path).unwrap().decode().unwrap();
+    for x in 0..4  {
+        for y in 0..4{
+            let z = img.crop_imm(x*128, y*128, 128, 128);
+            let img = Img::new(z, x,y);
+            vec.push(img);
+        }
+    }
+
+    let index = rand::thread_rng().gen_range(0..vec.len());
+    let selected = &vec[index];
+    for x in 0..128{
+        for y in 0..128 {
+            let black : u8 = 0;
+            let pixel = image::Rgba([black,black,black,255]);
+            img.put_pixel(x+128*selected.x, y+128*selected.y, pixel)
+        }
+    }
+
+    let mut k: Vec<String> = Vec::new();
+
+    for img in vec {
+        let b = img.image;
+        let z = b.into_bytes();
+        k.push(base64::encode(z));
+    }
+    
+    let result_image = img.into_bytes();
+    (index.try_into().unwrap(), base64::encode(&result_image), k)
+}
+
+fn get_random_image_name() -> String{
+    let names = vec!["17-norway-landscape-photography.jpg","880-winter-rocky-landscape.jpg"];
+    let length = names.len();
+    let index: usize = rand::thread_rng().gen_range(0..length);
+
+    String::from(names[index])
 }
