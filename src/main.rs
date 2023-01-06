@@ -32,7 +32,7 @@ async fn main() {
                     challenge.actual.unwrap() == challenge.expected, 
                     challenge.timestamp.unwrap()))
             }
-        });
+        }).with(warp::cors().allow_any_origin());
 
     let answer = warp::post()
         .and(warp::path("api"))
@@ -57,7 +57,7 @@ async fn main() {
             };
 
             res
-        });
+        }).with(warp::cors().allow_any_origin());
 
         let start = warp::post()
             .and(warp::path("api"))
@@ -73,7 +73,7 @@ async fn main() {
                     None => Err(warp::reject()),
                 }
 
-            });
+            }).with(warp::cors().allow_any_origin());
 
 
     let routes = check.or(answer).or(start);
