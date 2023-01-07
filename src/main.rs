@@ -274,22 +274,25 @@ async fn get_image() -> (u32, String,  Vec<String>) {
     for img in vec {
         let b = img.image;
         let writer: &mut Cursor<Vec<u8>> = &mut Cursor::new(Vec::new());
-        b.write_to(writer, ImageOutputFormat::Jpeg(75));
+        if let Err(err) =  b.write_to(writer, ImageOutputFormat::Jpeg(75)){
+            panic!("{}",err);
+        }
+
 
         k.push(base64::encode(writer.get_ref()));
     }
     
-    //let result_image = img.into_bytes();
-
     let writer: &mut Cursor<Vec<u8>> = &mut Cursor::new(Vec::new());
 
-    img.write_to(writer, ImageOutputFormat::Jpeg(75));
+    if let Err(err) = img.write_to(writer, ImageOutputFormat::Jpeg(75)){
+        panic!("{}",err);
+    }
 
     (index.try_into().unwrap(), base64::encode(writer.get_ref()), k)
 }
 
 fn get_random_image_name() -> String{
-    let names = vec!["img1","img2","img3","img4","img5","img6","img7","img8","img9","img10",];
+    let names = vec!["img1.jpg","img2.jpg","img3.jpg","img4.jpg","img5.jpg","img6.jpg","img7.jpg","img8.jpg","img9.jpg","img10.jpg",];
     let length = names.len();
     let index: usize = rand::thread_rng().gen_range(0..length);
 
