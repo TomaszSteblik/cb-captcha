@@ -14,7 +14,7 @@
   },
   "customHandler": {
     "description": {
-      "defaultExecutablePath": "handler",
+      "defaultExecutablePath": "target/release/handler",
       "workingDirectory": "",
       "arguments": []
     },
