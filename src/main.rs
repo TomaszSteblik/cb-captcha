@@ -273,8 +273,10 @@ async fn get_image() -> (u32, String,  Vec<String>) {
 
     for img in vec {
         let b = img.image;
-        let z = b.into_bytes();
-        k.push(base64::encode(z));
+        let writer: &mut Cursor<Vec<u8>> = &mut Cursor::new(Vec::new());
+        b.write_to(writer, ImageOutputFormat::Jpeg(75));
+
+        k.push(base64::encode(writer.get_ref()));
     }
     
     //let result_image = img.into_bytes();
