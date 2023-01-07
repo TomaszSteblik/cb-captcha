@@ -1,9 +1,9 @@
-use std::io::Error;
+use std::io::{Error, BufWriter, Cursor};
 use std::{collections::HashMap};
 use std::env;
 use std::net::Ipv4Addr;
 use chrono::{Utc};
-use image::{DynamicImage, GenericImageView, Pixel, GenericImage};
+use image::{DynamicImage, GenericImageView, Pixel, GenericImage, ImageOutputFormat};
 use mongodb::Collection;
 use mongodb::options::FindOneOptions;
 use warp::http;
@@ -277,8 +277,13 @@ async fn get_image() -> (u32, String,  Vec<String>) {
         k.push(base64::encode(z));
     }
     
-    let result_image = img.into_bytes();
-    (index.try_into().unwrap(), base64::encode(&result_image), k)
+    //let result_image = img.into_bytes();
+
+    let writer: &mut Cursor<Vec<u8>> = &mut Cursor::new(Vec::new());
+
+    img.write_to(writer, ImageOutputFormat::Jpeg(75));
+
+    (index.try_into().unwrap(), base64::encode(writer.get_ref()), k)
 }
 
 fn get_random_image_name() -> String{
