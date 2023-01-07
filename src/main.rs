@@ -6,6 +6,7 @@ use chrono::{Utc};
 use image::{DynamicImage, GenericImageView, Pixel, GenericImage};
 use mongodb::Collection;
 use mongodb::options::FindOneOptions;
+use warp::http;
 use warp::hyper::Body;
 use warp::{http::Response, Filter};
 use mongodb::{Client, options::ClientOptions};
@@ -16,6 +17,8 @@ use image::io::Reader as ImageReader;
 
 #[tokio::main]
 async fn main() {
+    env_logger::init();
+
     let check = warp::get()
         .and(warp::path("api"))
         .and(warp::path("check"))
@@ -32,7 +35,7 @@ async fn main() {
                     challenge.actual.unwrap() == challenge.expected, 
                     challenge.timestamp.unwrap()))
             }
-        }).with(warp::cors().allow_any_origin());
+        });
 
     let answer = warp::post()
         .and(warp::path("api"))
@@ -57,7 +60,7 @@ async fn main() {
             };
 
             res
-        }).with(warp::cors().allow_any_origin());
+        });
 
         let start = warp::post()
             .and(warp::path("api"))
@@ -75,8 +78,19 @@ async fn main() {
 
             }).with(warp::cors().allow_any_origin());
 
+        let health = warp::get()
+            .and(warp::path("api"))
+            .and(warp::path("healthcheck"))
+            .and(warp::path::end())
+            .map(warp::reply);
 
-    let routes = check.or(answer).or(start);
+        let cors = warp::cors()
+            .allow_any_origin()
+            .allow_headers(vec!["authorization", "content-type"])
+            .allow_methods(vec!["GET", "POST"]);
+
+
+    let routes = check.or(answer).or(start).or(health).with(cors).with(warp::log("routes"));
 
     let port_key = "FUNCTIONS_CUSTOMHANDLER_PORT";
     let port: u16 = match env::var(port_key) {
