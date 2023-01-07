@@ -289,7 +289,7 @@ async fn get_image() -> (u32, String,  Vec<String>) {
 }
 
 fn get_random_image_name() -> String{
-    let names = vec!["17-norway-landscape-photography.jpg","880-winter-rocky-landscape.jpg"];
+    let names = vec!["img1","img2","img3","img4","img5","img6","img7","img8","img9","img10",];
     let length = names.len();
     let index: usize = rand::thread_rng().gen_range(0..length);
 
